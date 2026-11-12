@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Shooting Target Game</title>
+    <style>
+        body {
+            margin: 0;
+            text-align: center;
+            font-family: Arial;
+            background: black;
+            color: white;
+        }
+
+        h2 {
+            margin: 10px;
+        }
+
+        #score {
+            font-size: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+      import * as THREE from 'three';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('black');
+
+const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
+camera.position.z = 8;
+
+const renderer = new THREE.WebGLRenderer();
+document.body.appendChild(renderer.domElement);
+
+const scoreText = document.getElementById('score');
+const timerText = document.getElementById('timer');
+const geometry = new THREE.SphereGeometry(0.7, 32, 32);
+const material = new THREE.MeshBasicMaterial({ color: 'red' });
+const raycaster = new THREE.Raycaster();
+const clock = new THREE.Clock();
+let targets = [];
+let score = 0;
+let timeLeft = 30;
+let timer;
+let spawnTimer;
+let audio;
+
+function resize() {
+    const height = window.innerHeight - 100;
+    camera.aspect = window.innerWidth / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, height);
+}
+
+function randomPosition() {
+    const height = camera.position.z * Math.tan(camera.fov * Math.PI / 360) - 0.7;
+    const width = height * camera.aspect - 0.7;
+    return new THREE.Vector3((Math.random() * 2 - 1) * width, (Math.random() * 2 - 1) * height, 0);
+}
+
+function addTarget() {
+    const target = new THREE.Mesh(geometry, material);
+    target.position.copy(randomPosition());
+    target.userData.destination = randomPosition();
+    target.userData.speed = 2 + Math.random() * 2;
+    scene.add(target);
+    targets.push(target);
+}
+
+function startGame() {
+    clearInterval(timer);
+    clearInterval(spawnTimer);
+    timeLeft = 30;
+    timerText.textContent = `Time: ${timeLeft}`;
+    timer = setInterval(() => {
+        timerText.textContent = `Time: ${--timeLeft}`;
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            clearInterval(spawnTimer);
+        }
+    }, 1000);
+    spawnTimer = setInterval(() => timeLeft > 0 && addTarget(), 2000);
+}
+
+window.resetGame = () => {
+    targets.forEach(target => scene.remove(target));
+    targets = [];
+    score = 0;
+    scoreText.textContent = 'Score: 0';
+    for (let i = 0; i < 3; i++) addTarget();
+    startGame();
+};
+
+renderer.domElement.addEventListener('click', event => {
+    audio ??= new AudioContext();
+    const oscillator = audio.createOscillator(), gain = audio.createGain();
+    oscillator.frequency.value = 400;
+    gain.gain.setValueAtTime(0.08, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.1);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start();
+    oscillator.stop(audio.currentTime + 0.1);
+    if (timeLeft <= 0) return;
+
+    const bounds = renderer.domElement.getBoundingClientRect();
+    const pointer = new THREE.Vector2(
+        ((event.clientX - bounds.left) / bounds.width) * 2 - 1,
+        -((event.clientY - bounds.top) / bounds.height) * 2 + 1
+    );
+    raycaster.setFromCamera(pointer, camera);
+    const target = raycaster.intersectObjects(targets)[0]?.object;
+    if (!target) return;
+    scene.remove(target);
+    targets = targets.filter(item => item !== target);
+    scoreText.textContent = `Score: ${++score}`;
+});
+
+window.addEventListener('resize', resize);
+resize();
+window.resetGame();
+
+function animate() {
+    requestAnimationFrame(animate);
+    const delta = clock.getDelta();
+    if (timeLeft > 0) targets.forEach(target => {
+        const destination = target.userData.destination;
+        const dx = destination.x - target.position.x;
+        const dy = destination.y - target.position.y;
+        const distance = Math.hypot(dx, dy);
+        const step = target.userData.speed * delta;
+        if (distance < step) target.userData.destination = randomPosition();
+        else target.position.set(target.position.x + dx / distance * step, target.position.y + dy / distance * step, 0);
+    });
+    renderer.render(scene, camera);
+}
+
+animate();
+
+   <!---</step> <h2>Shooting Target Game</h2>
+    <p id="score">Score: 0</p>
+    <p id="timer">Time: 30</p>
+    <button onclick="resetGame()">Reset Game</button>
+
+    <script type="module" src="./main.js"></script> 
+    <title>Shooting Target Game</title>
+    <style>
+        body {
+            margin: 0;
+            text-align: center;
+            font-family: Arial;
+            background: black;
+            color: white;
+        }
+
+        h2 {
+            margin: 10px;
+        }
+
+        #score {
+            font-size: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            display: block;
+        }
+    </style> -->
+
+
+    liongame 
+
+
+import * as THREE from 'three';
+import hotkeys from 'hotkeys-js';
+
+// DOM elements
+const startScreen = document.getElementById('start-screen');
+const failScreen = document.getElementById('fail-screen');
+const scoreVal = document.getElementById('score-val');
+const missVal = document.getElementById('miss-val');
+
+// Scene
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xd9b86c);
+
+// Camera
+const camera = new THREE.PerspectiveCamera(
+    75,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    1000
+);
+
+camera.position.z = 8;
+
+// Renderer
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+document.body.appendChild(renderer.domElement);
+
+// Load textures
+const loader = new THREE.TextureLoader();
+
+const lionTexture = await loader.loadAsync('lion.png');
+const cowTexture = await loader.loadAsync('cow.png');
+const hyenaTexture = await loader.loadAsync('hyena.png');
+
+// Create lion
+const lion = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.2, 1.2),
+    new THREE.MeshBasicMaterial({
+        map: lionTexture,
+        transparent: true
+    })
+);
+
+scene.add(lion);
+
+// Create cow
+const cow = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+        map: cowTexture,
+        transparent: true
+    })
+);
+
+scene.add(cow);
+
+// Create hyena
+const hyena = new THREE.Mesh(
+    new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({
+        map: hyenaTexture,
+        transparent: true
+    })
+);
+
+scene.add(hyena);
+
+// Collision boxes
+const lionBox = new THREE.Box3();
+const cowBox = new THREE.Box3();
+const hyenaBox = new THREE.Box3();
+
+// Settings
+const lionSpeed = 0.12;
+const cowSpeed = 0.07;
+const hyenaSpeed = 0.045;
+
+const maxX = 4.5;
+const maxY = 3;
+
+// Game variables
+let gameStarted = false;
+let isGameOver = false;
+
+let score = 0;
+let misses = 0;
+
+// Random position
+function getRandom(min, max) {
+    return Math.random() * (max - min) + min;
+}
+
+// Respawn animal
+function respawn(animal) {
+
+    let attempts = 0;
+
+    do {
+        animal.position.x = getRandom(-maxX, maxX);
+        animal.position.y = getRandom(-maxY, maxY);
+
+        attempts++;
+
+    } while (
+        animal.position.distanceTo(lion.position) < 3 &&
+        attempts < 100
+    );
+}
+
+// Move animals
+function moveFromLion(animal, speed, direction) {
+
+    let dx = lion.position.x - animal.position.x;
+    let dy = lion.position.y - animal.position.y;
+
+    let length = Math.sqrt(dx * dx + dy * dy);
+
+    if (length > 0) {
+
+        animal.position.x += (dx / length) * speed * direction;
+        animal.position.y += (dy / length) * speed * direction;
+
+    }
+
+    // Screen boundaries
+    animal.position.x = THREE.MathUtils.clamp(
+        animal.position.x,
+        -maxX,
+        maxX
+    );
+
+    animal.position.y = THREE.MathUtils.clamp(
+        animal.position.y,
+        -maxY,
+        maxY
+    );
+}
+
+// Reset game
+function resetGame() {
+
+    score = 0;
+    misses = 0;
+
+    isGameOver = false;
+
+    scoreVal.innerText = score;
+    missVal.innerText = misses;
+
+    failScreen.style.display = 'none';
+
+    lion.position.set(0, 0, 0);
+
+    respawn(cow);
+    respawn(hyena);
+}
+
+// Animation
+function animate() {
+
+    if (gameStarted && !isGameOver) {
+
+        // Lion movement
+        if (hotkeys.isPressed('a') && lion.position.x > -maxX) {
+            lion.position.x -= lionSpeed;
+        }
+
+        if (hotkeys.isPressed('d') && lion.position.x < maxX) {
+            lion.position.x += lionSpeed;
+        }
+
+        if (hotkeys.isPressed('w') && lion.position.y < maxY) {
+            lion.position.y += lionSpeed;
+        }
+
+        if (hotkeys.isPressed('s') && lion.position.y > -maxY) {
+            lion.position.y -= lionSpeed;
+        }
+
+        // Cow runs away
+        moveFromLion(cow, cowSpeed, -1);
+
+        // Hyena chases
+        moveFromLion(hyena, hyenaSpeed, 1);
+
+        // Update collision boxes
+        lionBox.setFromObject(lion);
+        cowBox.setFromObject(cow);
+        hyenaBox.setFromObject(hyena);
+
+        // Catch cow
+        if (lionBox.intersectsBox(cowBox)) {
+
+            score++;
+
+            scoreVal.innerText = score;
+
+            respawn(cow);
+        }
+
+        // Hyena attacks
+        if (lionBox.intersectsBox(hyenaBox)) {
+
+            misses++;
+
+            missVal.innerText = misses;
+
+            respawn(hyena);
+
+            if (misses >= 3) {
+
+                isGameOver = true;
+
+                failScreen.style.display = 'flex';
+            }
+        }
+    }
+
+    renderer.render(scene, camera);
+}
+
+// Start game using ENTER key
+hotkeys('enter', function () {
+
+    if (!gameStarted) {
+
+        gameStarted = true;
+
+        startScreen.style.display = 'none';
+
+        resetGame();
+    }
+});
+
+// Restart using R
+hotkeys('r', function () {
+
+    if (isGameOver) {
+
+        resetGame();
+    }
+});
+
+// Also allow clicking start screen
+startScreen.addEventListener('click', function () {
+
+    if (!gameStarted) {
+
+        gameStarted = true;
+
+        startScreen.style.display = 'none';
+
+        resetGame();
+    }
+});
+
+// Initial setup
+resetGame();
+
+// Handle window resizing
+window.addEventListener('resize', function () {
+
+    camera.aspect = window.innerWidth / window.innerHeight;
+
+    camera.updateProjectionMatrix();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+});
+
+// Start animation
+renderer.setAnimationLoop(animate);
+ html
+<!--<div id="start-screen">
+    <h1>Lion Game</h1>
+    <p>Press ENTER to Start</p>
+</div>
+
+<div id="fail-screen" style="display:none;">
+    <h1>Game Over!</h1>
+    <p>Press R to Restart</p>
+</div>
+
+<div>
+    Score: <span id="score-val">0</span>
+    Misses: <span id="miss-val">0</span>
+</div>
+-->
+//html //div id="scoreboard"> h4>Score: span id="score-val">0/span> | Misses: span id="miss-val">0/span>/3/h4> /div> div id="start-screen"> h1>Egg Catching Game/h1> p>Press 'S' to start/p> /div> div id="fail-screen"> h1>GAME OVER/h1> p style="color: white;">3 eggs missed!/p> p style="color: white;">Press 'R' to Restart/p> /div> script type="module" src="main.js">/script>
+
+
+
+
+SHOOTING GAME AUSTIN 
+
+
+// --- Import Statements (Local Files) ---
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// --- Game Variables ---
+let scene, camera, renderer, controls;
+let targets = [];
+let score = 0;
+
+// Audio variables
+let audioListener, hitSound, audioLoader;
+
+const scoreElement = document.getElementById('score');
+const resetBtn = document.getElementById('reset-btn');
+const raycaster = new THREE.Raycaster();
+// Center of the screen in Normalized Device Coordinates (NDC)
+const centerMouse = new THREE.Vector2(0, 0); 
+
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1e1e24);
+camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 5, 15);
+
+renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+
+// 5. Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+directionalLight.position.set(10, 20, 7);
+scene.add(directionalLight);
+
+audioListener = new THREE.AudioListener();
+camera.add(audioListener);
+
+hitSound = new THREE.Audio(audioListener);
+audioLoader = new THREE.AudioLoader();
+
+audioLoader.load('hit.mp3', function(buffer) {
+    hitSound.setBuffer(buffer);
+    hitSound.setVolume(0.5);
+});
+
+// 7. Spawn initial targets
+spawnTargets();
+
+// --- Event Listeners ---
+window.addEventListener('pointerdown', onDocumentPointerDown, false);
+resetBtn.addEventListener('click', resetGame);
+animate();
+
+// --- Target Management ---
+function spawnTargets() {
+    // Clear any existing targets from scene
+    targets.forEach(t => scene.remove(t));
+    targets = [];
+
+    const geometry = new THREE.SphereGeometry(1, 32, 32);
+    
+    for (let i = 0; i < 3; i++) {
+        const material = new THREE.MeshStandardMaterial({ color: Math.random() * 0xffffff, roughness: 0.3,metalness: 0.2});
+        const sphere = new THREE.Mesh(geometry, material);
+        sphere.position.x = (Math.random() - 0.5) * 12;
+        sphere.position.y = Math.random() * 5 + 1;
+        sphere.position.z = (Math.random() - 0.5) * 10;
+        
+        scene.add(sphere);
+        targets.push(sphere);
+    }
+}
+
+// --- Shooting Mechanic (Raycasting) ---
+function onDocumentPointerDown(event) {
+
+    // Update the raycaster using the center of the camera
+    raycaster.setFromCamera(centerMouse, camera);
+
+    // Calculate objects intersecting the picking ray
+    const intersects = raycaster.intersectObjects(targets);
+
+    // Determine the end point of our laser line
+    const laserOrigin = camera.position.clone();
+    let laserEnd = new THREE.Vector3();
+
+    if (intersects.length > 0) {
+        // If it hits a target, end the line exactly at the hit coordinate point
+        laserEnd.copy(intersects[0].point);
+
+        const hitTarget = intersects[0].object;
+
+        if (hitSound.buffer) {
+            if (hitSound.isPlaying) hitSound.stop();
+            hitSound.play();
+        }
+
+        scene.remove(hitTarget);
+        targets = targets.filter(t => t !== hitTarget);
+
+        score += 10;
+        scoreElement.innerText = score;
+    } 
+
+    // Draw the visible laser line tracer
+    createLaserTracer(laserOrigin, laserEnd);
+}
+
+// --- Visual Laser Tracer ---
+function createLaserTracer(start, end) {
+    const points = [start, end];
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const material = new THREE.LineBasicMaterial({ 
+        color: 0xff0033, 
+    });
+    
+    const laserLine = new THREE.Line(geometry, material);
+    scene.add(laserLine);
+
+    setTimeout(() => {
+        scene.remove(laserLine);
+        geometry.dispose();
+        material.dispose();
+    }, 100);
+}
+
+function resetGame() {
+    score = 0;
+    scoreElement.innerText = score;
+    spawnTargets();
+}
+
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    controls.update(); 
+
+    renderer.render(scene, camera);
+}
+
+html 
+
+
+<!--<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Three.js Shooting Game</title>
+
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e24;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #game-ui {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            color: white;
+            z-index: 10;
+        }
+
+        #score {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        #reset-btn {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #ff0033;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #reset-btn:hover {
+            background-color: #cc0029;
+        }
+
+        #instructions {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            color: white;
+            font-size: 14px;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="game-ui">
+
+        <div id="score">
+            Score: <span id="score">0</span>
+        </div>
+
+        <button id="reset-btn">Reset Game</button>
+
+    </div>
+
+    <div id="instructions">
+        Move the camera using the mouse.<br>
+        Click the center of the screen to shoot targets.
+    </div>
+
+    <script type="module" src="/main.js"></script>
+
+</body>
+
+</html> -->
+the html should also have 
+<!--<div id="score">
+    Score: <span id="score-value">0</span>
+</div> -->
+the main.js should have 
+const scoreElement = document.getElementById('score-value');
+
+austins index.html 
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Shooting Target Game</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            user-select: none;
+        }
+        /* UI Overlay Container */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+            z-index: 10;
+        }
+        #score-board {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            background-color: #ff4757;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #ff6b81;
+        }
+        /* Crosshair in the absolute center of the screen */
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            transform: translate(-50%, -50%);
+            border: 2px solid white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body> -->
+
+  <!-- UI Elements -->
+  <!--  <div id="ui">
+        <div id="score-board">Score: <span id="score">0</span></div>
+        <button id="reset-btn">Reset Game</button>
+    </div>
+    <div id="crosshair"></div>
+
+    <!-- External Game Logic Loaded as a Module 
+    <script type="module" src="main.js"></script>
+</body>
+</html> -->
+
+
+austins shooting index with the main
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+let scene, camera, renderer, controls;
+let targets = [];
+let score = 0;
+
+const scoreElement = document.getElementById('score');
+const resetBtn = document.getElementById('reset-btn');
+const raycaster = new THREE.Raycaster();
+const centerMouse = new THREE.Vector2(0, 0);
+
+init();
+spawnTargets();
+animate();
+
+function init() {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1e1e24);
+  scene.fog = new THREE.Fog(0x1e1e24, 25, 65);
+
+  camera = new THREE.PerspectiveCamera(
+    75, window.innerWidth / window.innerHeight, 0.1, 1000
+  );
+  camera.position.set(0, 5, 15);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  document.body.appendChild(renderer.domElement);
+
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.05;
+  controls.target.set(0, 3, 0);
+  controls.minDistance = 5;
+  controls.maxDistance = 35;
+
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+  directionalLight.position.set(10, 20, 7);
+  scene.add(directionalLight);
+
+  // Ground and simple arena grid
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(60, 60),
+    new THREE.MeshStandardMaterial({ color: 0x30343d, roughness: 0.95 })
+  );
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -0.05;
+  scene.add(floor);
+
+  const grid = new THREE.GridHelper(60, 30, 0x687080, 0x424854);
+  grid.position.y = 0.01;
+  scene.add(grid);
+
+  // A few simple arena walls to make the space visible
+  const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x252a33 });
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(60, 12, 1), wallMaterial);
+  backWall.position.set(0, 6, -25);
+  scene.add(backWall);
+
+  window.addEventListener('pointerdown', shoot);
+  window.addEventListener('resize', onWindowResize);
+  resetBtn.addEventListener('click', resetGame);
+}
+
+function spawnTargets() {
+  // Remove old targets and dispose their materials
+  for (const target of targets) {
+    scene.remove(target);
+    target.geometry.dispose();
+    target.material.dispose();
+  }
+  targets = [];
+
+  const geometry = new THREE.SphereGeometry(0.85, 24, 24);
+
+  for (let i = 0; i < 6; i++) {
+    const material = new THREE.MeshStandardMaterial({
+      color: new THREE.Color().setHSL(Math.random(), 0.8, 0.55),
+      roughness: 0.3,
+      metalness: 0.2
+    });
+
+    const sphere = new THREE.Mesh(geometry, material);
+    sphere.position.set(
+      (Math.random() - 0.5) * 22,
+      Math.random() * 7 + 1.5,
+      -Math.random() * 18 - 2
+    );
+
+    // Each target moves in a random direction and bounces inside the arena
+    sphere.userData.velocity = new THREE.Vector3(
+      (Math.random() - 0.5) * 0.10,
+      (Math.random() - 0.5) * 0.07,
+      (Math.random() - 0.5) * 0.06
+    );
+
+    scene.add(sphere);
+    targets.push(sphere);
+  }
+}
+
+function shoot() {
+  // Ignore clicks on the reset button
+  if (resetBtn.matches(':hover')) return;
+
+  raycaster.setFromCamera(centerMouse, camera);
+  const intersects = raycaster.intersectObjects(targets, false);
+
+  const laserStart = camera.position.clone();
+  const laserEnd = new THREE.Vector3();
+
+  if (intersects.length > 0) {
+    laserEnd.copy(intersects[0].point);
+    const hitTarget = intersects[0].object;
+
+    scene.remove(hitTarget);
+    targets = targets.filter(target => target !== hitTarget);
+
+    hitTarget.geometry.dispose();
+    hitTarget.material.dispose();
+
+    score += 10;
+    scoreElement.textContent = score;
+
+    // Replace the target so there are always six on screen
+    setTimeout(() => addOneTarget(), 250);
+  } else {
+    // Show the laser extending forward when the shot misses
+    raycaster.setFromCamera(centerMouse, camera);
+    laserEnd.copy(raycaster.ray.origin).add(
+      raycaster.ray.direction.clone().multiplyScalar(35)
+    );
+  }
+
+  createLaserTracer(laserStart, laserEnd);
+}
+
+function addOneTarget() {
+  const geometry = new THREE.SphereGeometry(0.85, 24, 24);
+  const material = new THREE.MeshStandardMaterial({
+    color: new THREE.Color().setHSL(Math.random(), 0.8, 0.55),
+    roughness: 0.3,
+    metalness: 0.2
+  });
+  const sphere = new THREE.Mesh(geometry, material);
+  sphere.position.set(
+    (Math.random() - 0.5) * 22,
+    Math.random() * 7 + 1.5,
+    -Math.random() * 18 - 2
+  );
+  sphere.userData.velocity = new THREE.Vector3(
+    (Math.random() - 0.5) * 0.10,
+    (Math.random() - 0.5) * 0.07,
+    (Math.random() - 0.5) * 0.06
+  );
+  scene.add(sphere);
+  targets.push(sphere);
+}
+
+function createLaserTracer(start, end) {
+  const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+  const material = new THREE.LineBasicMaterial({
+    color: 0xff1744,
+    transparent: true,
+    opacity: 1
+  });
+  const line = new THREE.Line(geometry, material);
+  scene.add(line);
+
+  setTimeout(() => {
+    scene.remove(line);
+    geometry.dispose();
+    material.dispose();
+  }, 120);
+}
+
+function updateTargets() {
+  for (const target of targets) {
+    const velocity = target.userData.velocity;
+    target.position.add(velocity);
+
+    if (target.position.x > 12 || target.position.x < -12) velocity.x *= -1;
+    if (target.position.y > 10 || target.position.y < 1) velocity.y *= -1;
+    if (target.position.z > -2 || target.position.z < -21) velocity.z *= -1;
+
+    target.rotation.x += 0.01;
+    target.rotation.y += 0.015;
+  }
+}
+
+function resetGame() {
+  score = 0;
+  scoreElement.textContent = score;
+  spawnTargets();
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  updateTargets();
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+index
+
+
+<!-- <html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three.js Target Shooting Game</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, sans-serif;
+      background: #1e1e24;
+      color: white;
+    }
+    #score-box {
+      position: fixed;
+      top: 18px;
+      left: 18px;
+      z-index: 5;
+      padding: 12px 18px;
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 10px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+    #help {
+      position: fixed;
+      top: 18px;
+      right: 18px;
+      z-index: 5;
+      padding: 10px 14px;
+      max-width: 260px;
+      background: rgba(0,0,0,.55);
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: right;
+    }
+    #reset-btn {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%);
+      z-index: 5;
+      padding: 11px 22px;
+      border: 0;
+      border-radius: 8px;
+      background: #ff3155;
+      color: white;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    #reset-btn:hover { background: #dc2142; }
+    #crosshair {
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      transform: translate(-50%, -50%);
+      z-index: 4;
+      pointer-events: none;
+    }
+    #crosshair::before, #crosshair::after {
+      content: "";
+      position: absolute;
+      background: #ffffff;
+      box-shadow: 0 0 4px #000;
+    }
+    #crosshair::before { width: 2px; height: 22px; left: 10px; }
+    #crosshair::after { height: 2px; width: 22px; top: 10px; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <div id="score-box">Score: <span id="score">0</span></div>
+  <div id="help">Aim with the center crosshair<br>Click / tap to shoot<br>Drag to look around</div>
+  <div id="crosshair"></div>
+  <button id="reset-btn">Reset Game</button>
+  <script type="module" src="/main.js"></script>
+-->
+</body>
+</html>
